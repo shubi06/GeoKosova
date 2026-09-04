@@ -28,6 +28,10 @@ jobs:
 
       - name: Konfiguro Pages
         uses: actions/configure-pages@v5
+        with:
+          # Ndez Pages vetvetiu me burim "GitHub Actions". Pa kjo, hapi i
+          # publikimit deshton nese Pages nuk eshte ndezur me pare nga Settings.
+          enablement: true
 
       - name: Paketo public/
         uses: actions/upload-pages-artifact@v3
