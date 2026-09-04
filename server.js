@@ -448,6 +448,19 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
+server.on("error", err => {
+  if (err.code === "EADDRINUSE") {
+    console.error("\nPorti " + PORT + " është i zënë nga një proces tjetër.");
+    console.error("Ndalo atë proces, ose nis me port tjetër:");
+    console.error("  PORT=8766 node server.js\n");
+  } else if (err.code === "EACCES") {
+    console.error("\nNuk ka leje për portin " + PORT + ". Provo një port mbi 1024.\n");
+  } else {
+    console.error("\nServeri nuk u nis: " + err.message + "\n");
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   console.log("GeoKosova");
   console.log("  Një lojtar : http://localhost:" + PORT + "/");
