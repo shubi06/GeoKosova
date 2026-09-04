@@ -14,7 +14,31 @@ Tri variante:
 Vetëm Kosova: kufiri është poligon me 322 pika nga OpenStreetMap, dhe panoramat që bien
 jashtë tij hidhen tej gjatë zgjedhjes. Në modin "Lehtë", ecja bllokohet në kufi.
 
-## Nisja
+## Luaj online
+
+**https://shubi06.github.io/GeoKosova/**
+
+Faqja publikohet vetvetiu në GitHub Pages me çdo push në `main`
+(shih [.github/workflows/pages.yml](.github/workflows/pages.yml)).
+
+Pages shërben **vetëm skedarë statikë** dhe nuk ekzekuton Node, pra:
+
+| | Në Pages | Lokalisht |
+|---|---|---|
+| Një lojtar, Street View | ✅ | ✅ |
+| Një lojtar, Mapillary | ✅ | ✅ |
+| **Multiplayer** | ❌ kërkon `server.js` | ✅ |
+
+Multiplayer-i varet nga `/api/*` — dhoma, koha dhe pikëzimi janë punë e serverit. Në Pages
+faqja e multiplayer-it e zbulon vetë se serveri nuk po ekzekutohet dhe e thotë hapur, në
+vend që butonat të dështojnë pa shpjegim. Për multiplayer duhet nisur serveri lokalisht,
+ose vendosur në një host që ekzekuton Node (Render, Railway, Fly).
+
+Secili vizitor i fut kyçin e vet të Google — në Pages nuk ka server, pra `/api/config` nuk
+ekziston dhe asnjë kyç nuk shërbehet. **Shto adresën e Pages në kufizimet e kyçit tënd**
+te *Application restrictions → Websites*, përndryshe Google e refuzon.
+
+## Nisja lokale
 
 ```
 node server.js

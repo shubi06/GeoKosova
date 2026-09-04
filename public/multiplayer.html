@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>GeoKosova — multiplayer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230e1116'/%3E%3Cpath d='M11 6c-3.3 0-6 2.7-6 6 0 4.6 6 14 6 14s6-9.4 6-14c0-3.3-2.7-6-6-6zm0 8.3a2.3 2.3 0 110-4.6 2.3 2.3 0 010 4.6z' fill='%23f5c542'/%3E%3Cpath d='M23 12c-2.5 0-4.5 2-4.5 4.5 0 3.4 4.5 10.5 4.5 10.5s4.5-7.1 4.5-10.5C27.5 14 25.5 12 23 12zm0 6.2a1.7 1.7 0 110-3.4 1.7 1.7 0 010 3.4z' fill='%234493f8'/%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2b3440;
@@ -155,6 +156,16 @@
     <p class="sub">Të gjithë lojtarët e marrin <b>të njëjtin vend</b> në të njëjtën kohë, brenda territorit të Kosovës. Pikët i llogarit serveri.</p>
 
     <div class="err" id="joinErr"></div>
+
+    <div class="err" id="noServer" hidden style="background:#3a2a12;border-color:#7a5a20;color:#ffd9a0">
+      <b>Multiplayer-i nuk punon në kjo faqe.</b><br>
+      Kjo faqe shërbehet statikisht (GitHub Pages), pra <code>server.js</code> nuk po ekzekutohet —
+      dhe pa të nuk ka dhoma, kohë e përbashkët e pikëzim.<br><br>
+      Për multiplayer duhet nisur serveri me <code>node server.js</code> dhe hapur
+      <code>localhost:8765/multiplayer.html</code>.<br><br>
+      Variantet me një lojtar punojnë edhe këtu:
+      <a href="index.html">Street View</a> · <a href="mapillary.html">Mapillary</a>.
+    </div>
 
     <div class="field">
       <label for="pname">Emri jot</label>
@@ -837,11 +848,28 @@ wireSeg("segTime","time"); wireSeg("segArea","area");
 /* ---------------- hyrja ---------------- */
 let serverKey = null;
 (async function boot(){
+  /* Në një host statik (GitHub Pages) /api/config kthen faqen 404 të hostit,
+     jo JSON. Kjo është shenja se serveri nuk po ekzekutohet — thuaje hapur
+     në vend që lojtari të ndeshet me butona që dështojnë. */
   try {
-    const cfg = await (await fetch("/api/config")).json();
+    const res = await fetch("/api/config");
+    const ct = res.headers.get("content-type") || "";
+    if (!res.ok || !ct.includes("application/json")) throw new Error("no_server");
+    const cfg = await res.json();
+    if (typeof cfg.hasKey !== "boolean") throw new Error("no_server");
     serverKey = cfg.key || null;
     $("keyField").hidden = !!serverKey;
-  } catch (e){ $("keyField").hidden = false; }
+  } catch (e){
+    // .err mban display:none derisa vjen .on — vetëm heqja e `hidden` nuk e shfaq.
+    $("noServer").hidden = false;
+    $("noServer").classList.add("on");
+    $("keyField").hidden = true;
+    $("btnCreate").disabled = true;
+    $("btnJoin").disabled = true;
+    $("pname").disabled = true;
+    $("rcode").disabled = true;
+    return;
+  }
 
   try {
     const n = localStorage.getItem(NAME_LS); if (n) $("pname").value = n;

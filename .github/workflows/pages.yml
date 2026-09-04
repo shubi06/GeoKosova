@@ -1,0 +1,39 @@
+name: Deploy në GitHub Pages
+
+# Publikohet vetëm dosja public/ — server.js nuk ekzekutohet nga Pages,
+# pra multiplayer-i nuk funksionon në kjo faqe. Shih README.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Konfiguro Pages
+        uses: actions/configure-pages@v5
+
+      - name: Paketo public/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Publiko
+        id: deployment
+        uses: actions/deploy-pages@v4
