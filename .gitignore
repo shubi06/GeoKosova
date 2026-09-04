@@ -31,3 +31,6 @@ desktop.ini
 *.log
 tmp/
 .cache/
+
+# Konfigurimi lokal i Claude Code
+.claude/
