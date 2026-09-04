@@ -26,12 +26,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # KERKESE NJE-HERESHME: Settings -> Pages -> Source: "GitHub Actions".
+      # Provuam `enablement: true` qe ta ndezte vetvetiu, por token-i i
+      # workflow-it nuk e krijon dot faqen — pra ndezja behet nga Settings.
       - name: Konfiguro Pages
         uses: actions/configure-pages@v5
-        with:
-          # Ndez Pages vetvetiu me burim "GitHub Actions". Pa kjo, hapi i
-          # publikimit deshton nese Pages nuk eshte ndezur me pare nga Settings.
-          enablement: true
 
       - name: Paketo public/
         uses: actions/upload-pages-artifact@v3

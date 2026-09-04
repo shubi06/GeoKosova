@@ -21,6 +21,11 @@ jashtë tij hidhen tej gjatë zgjedhjes. Në modin "Lehtë", ecja bllokohet në 
 Faqja publikohet vetvetiu në GitHub Pages me çdo push në `main`
 (shih [.github/workflows/pages.yml](.github/workflows/pages.yml)).
 
+> **Ndezja e Pages bëhet një herë, me dorë:** *Settings → Pages → Source: **GitHub
+> Actions***. Pa kjo, hapi `Konfiguro Pages` dështon me `Get Pages site failed`.
+> Nëse dështon edhe pas kësaj, kontrollo *Settings → Actions → General → Workflow
+> permissions* dhe zgjidh **Read and write permissions**.
+
 Pages shërben **vetëm skedarë statikë** dhe nuk ekzekuton Node, pra:
 
 | | Në Pages | Lokalisht |
