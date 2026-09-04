@@ -1,0 +1,33 @@
+# ===========================================================================
+#  KRITIKE: config.json mban kyçin e Google Maps. Nuk futet KURRË në repo.
+#  Shabllonin e ke në config.example.json.
+# ===========================================================================
+config.json
+config.*.json
+!config.example.json
+
+# Variabla mjedisi
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Editorë dhe OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Të përkohshme
+*.log
+tmp/
+.cache/

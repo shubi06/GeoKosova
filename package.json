@@ -1,0 +1,23 @@
+{
+  "name": "geokosova",
+  "version": "1.0.0",
+  "description": "GeoGuessr vetem me territorin e Kosoves — nje lojtar dhe multiplayer, pa varesi npm.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "geoguessr",
+    "kosovo",
+    "street-view",
+    "mapillary",
+    "openstreetmap",
+    "game"
+  ],
+  "license": "MIT",
+  "private": true,
+  "dependencies": {}
+}

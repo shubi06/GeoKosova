@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GeoKosova — merr me mend vendin</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2b3440;
+    --txt:#e6edf3; --dim:#8b98a5; --accent:#f5c542; --accent2:#3fb950;
+    --bad:#f85149; --radius:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--font);overflow:hidden}
+  button{font-family:inherit;font-size:14px;cursor:pointer;border:0;border-radius:8px;padding:10px 16px;
+    background:var(--panel2);color:var(--txt);border:1px solid var(--line);transition:.14s}
+  button:hover:not(:disabled){background:#26303b;border-color:#3d4a58}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#1a1206;border-color:transparent;font-weight:650}
+  button.primary:hover:not(:disabled){background:#ffd75e}
+  input[type=text],input[type=password]{width:100%;padding:11px 13px;border-radius:8px;border:1px solid var(--line);
+    background:#0c1015;color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  a{color:var(--accent)}
+
+  .screen{position:fixed;inset:0;display:none;z-index:50}
+  .screen.on{display:block}
+  /* .center vetëm kur ekrani është aktiv — përndryshe display:flex e mbyt display:none. */
+  .center{align-items:center;justify-content:center;overflow:auto;padding:24px}
+  .screen.center.on{display:flex}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 28px;width:100%;max-width:560px}
+  .card h1{margin:0 0 4px;font-size:26px;letter-spacing:-.4px}
+  .card h1 span{color:var(--accent)}
+  .sub{color:var(--dim);font-size:13.5px;line-height:1.55;margin:0 0 20px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;font-weight:600}
+  .hint{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.5}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1 1 auto;min-width:74px;padding:9px 10px;font-size:13px}
+  /* flex-basis 0 → të shtatë butonat ndajnë njësoj një rresht të vetëm. */
+  .seg.tight button{min-width:0;flex:1 1 0;padding:9px 2px;font-size:12.5px}
+  .seg button[aria-pressed=true]{background:var(--accent);color:#1a1206;border-color:transparent;font-weight:650}
+  .row{display:flex;gap:14px}
+  .row>*{flex:1;min-width:0}
+  .err{background:#3b1518;border:1px solid #6e2529;color:#ffb3ad;padding:11px 13px;border-radius:8px;
+    font-size:13px;line-height:1.5;margin-bottom:16px;display:none}
+  .err.on{display:block}
+  details.help{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  details.help summary{cursor:pointer;font-size:13px;color:var(--dim);font-weight:600}
+  details.help ol{font-size:13px;color:var(--dim);line-height:1.75;padding-left:20px;margin:12px 0 0}
+  code{background:#0c1015;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+
+  /* ---- game ---- */
+  #pano{position:absolute;inset:0;background:#000}
+  #hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:8px;
+    background:rgba(14,17,22,.86);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:12px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+  .stat{padding:2px 12px;text-align:center;min-width:64px}
+  .stat+.stat{border-left:1px solid var(--line)}
+  .stat b{display:block;font-size:17px;line-height:1.25;font-variant-numeric:tabular-nums}
+  .stat i{font-style:normal;font-size:9.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim)}
+  .stat.warn b{color:var(--bad)}
+  #quit{position:absolute;top:12px;right:12px;z-index:20;padding:8px 12px;font-size:12.5px;
+    background:rgba(14,17,22,.86);backdrop-filter:blur(8px)}
+
+  #mapPanel{position:absolute;bottom:12px;right:12px;z-index:20;width:290px;height:205px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:0 10px 34px rgba(0,0,0,.55);transition:width .18s ease,height .18s ease;
+    display:flex;flex-direction:column}
+  #mapPanel:hover,#mapPanel.pinned{width:min(48vw,620px);height:min(56vh,470px)}
+  #guessMap{flex:1;min-height:0}
+  .mapbar{display:flex;gap:8px;padding:8px;border-top:1px solid var(--line);background:var(--panel)}
+  .mapbar button{padding:9px 12px;font-size:13px}
+  #btnGuess{flex:1}
+  #pin{width:38px;padding:9px 0;text-align:center}
+  #pin[aria-pressed=true]{background:var(--accent);color:#1a1206;border-color:transparent}
+
+  #toast{position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:30;
+    background:rgba(248,81,73,.95);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s}
+  #toast.on{opacity:1}
+
+  /* ---- overlays ---- */
+  .veil{position:fixed;inset:0;z-index:60;background:rgba(8,10,13,.9);display:none;
+    align-items:center;justify-content:center;padding:20px}
+  .veil.on{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:100%;max-width:820px;
+    max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+  #resultMap{height:min(46vh,380px);background:#0c1015}
+  .sheet .body{padding:20px 24px;overflow:auto}
+  .scoreline{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .scoreline .pts{font-size:34px;font-weight:750;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .scoreline .dist{font-size:15px;color:var(--txt)}
+  .place{font-size:13.5px;color:var(--dim);margin:8px 0 0}
+  .sheet .foot{padding:14px 24px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+  .bar{height:7px;background:#0c1015;border-radius:99px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,#3fb950,#f5c542);border-radius:99px;transition:width .5s}
+
+  table.sum{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.sum th{text-align:left;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.7px;
+    padding:0 10px 9px;font-weight:600}
+  table.sum td{padding:9px 10px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  table.sum td:last-child,table.sum th:last-child{text-align:right}
+  .grand{display:flex;align-items:baseline;gap:10px;margin:0 0 18px}
+  .grand b{font-size:42px;color:var(--accent);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+  .grand span{color:var(--dim);font-size:14px}
+  .best{font-size:12.5px;color:var(--dim);margin-top:14px}
+
+  #splash{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    flex-direction:column;gap:16px;background:var(--bg);color:var(--dim);font-size:14px}
+  #splash.on{display:flex}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media (max-width:640px){
+    #mapPanel{width:170px;height:130px;bottom:8px;right:8px}
+    #mapPanel:hover,#mapPanel.pinned{width:calc(100vw - 16px);height:60vh}
+    #hud{gap:4px;padding:6px}
+    .stat{min-width:52px;padding:2px 7px}
+    .stat b{font-size:15px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP ============ -->
+<div class="screen center on" id="scSetup">
+  <div class="card">
+    <h1>Geo<span>Kosova</span></h1>
+    <p class="sub">Hidhesh në një pikë të rastit të Street View <b>brenda territorit të Kosovës</b> dhe duhet t'ia qëllosh vendin në hartë. Sa më afër, aq më shumë pikë.</p>
+
+    <div class="err" id="setupErr"></div>
+
+    <div class="field">
+      <label for="apikey">Google Maps API key</label>
+      <input type="password" id="apikey" placeholder="AIza..." autocomplete="off" spellcheck="false">
+      <p class="hint">Ruhet vetëm në <code>localStorage</code> të shfletuesit tënd — nuk shkon asgjëkund tjetër. Duhen aktive dy API: <b>Maps JavaScript API</b> (përfshin Street View) dhe <b>Geocoding API</b>.</p>
+    </div>
+
+    <div class="field">
+      <label>Raundet</label>
+      <div class="seg" id="segRounds">
+        <button data-v="3">3</button><button data-v="5" aria-pressed="true">5</button><button data-v="10">10</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Vështirësia</label>
+        <div class="seg" id="segDiff">
+          <button data-v="easy">Lehtë</button>
+          <button data-v="normal" aria-pressed="true">Normal</button>
+          <button data-v="hard">Vështirë</button>
+        </div>
+        <p class="hint" id="diffHint"></p>
+      </div>
+      <div class="field">
+        <label>Zona</label>
+        <div class="seg" id="segArea">
+          <button data-v="mixed" aria-pressed="true">E miksuar</button>
+          <button data-v="all">Krejt</button>
+          <button data-v="towns">Qytete</button>
+        </div>
+        <p class="hint" id="areaHint"></p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Koha / raund</label>
+      <div class="seg tight" id="segTime">
+        <button data-v="0" aria-pressed="true">∞</button>
+        <button data-v="10">10s</button><button data-v="20">20s</button>
+        <button data-v="30">30s</button><button data-v="40">40s</button>
+        <button data-v="50">50s</button><button data-v="60">60s</button>
+      </div>
+    </div>
+
+    <button class="primary" id="btnStart" style="width:100%;padding:13px;font-size:15px">Fillo lojën</button>
+
+    <details class="help">
+      <summary>Si e marr një API key? (falas, ~5 minuta)</summary>
+      <ol>
+        <li>Hap <a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">console.cloud.google.com/google/maps-apis/start</a> dhe hyr me llogarinë e Google.</li>
+        <li>Krijo një projekt të ri — emërtoje <code>geokosova</code>.</li>
+        <li>Aktivizo <b>Maps JavaScript API</b> (Street View vjen brenda tij) dhe <b>Geocoding API</b> nga <i>APIs &amp; Services → Library</i>.</li>
+        <li><i>APIs &amp; Services → Credentials → + Create credentials → API key</i>. Kopjoje dhe fute lart.</li>
+        <li>Kliko <i>Edit API key</i> dhe kufizoje: <i>Application restrictions → Websites</i> → shto <code>http://localhost:8765/*</code>; te <i>API restrictions</i> zgjidh vetëm dy API-të e mësipërme. Kështu nuk mund t'i përdorë kush tjetër.</li>
+        <li>Google kërkon një llogari faturimi me kartë, por kuota falas mujore është e bollshme (shih më poshtë). Vendos edhe një <i>budget alert</i> te <i>Billing → Budgets &amp; alerts</i> për siguri.</li>
+      </ol>
+    </details>
+
+    <details class="help">
+      <summary>Sa shpenzon kjo lojë? (kuota falas)</summary>
+      <ol style="list-style:none;padding-left:0">
+        <li><b>Dynamic Street View</b> — 5 000 panorama falas/muaj, pastaj $14 / 1 000. Kjo është kufizimi kryesor: <b>1 panoramë për raund</b>.</li>
+        <li><b>Dynamic Maps</b> — 10 000 ngarkime falas/muaj, pastaj $7 / 1 000. Kjo lojë hap <b>2 harta për sesion</b> të faqes, jo për raund.</li>
+        <li><b>Geocoding</b> — 10 000 falas/muaj, pastaj $5 / 1 000. Një thirrje për raund, për emrin e vendit.</li>
+        <li style="margin-top:10px"><b>Në praktikë:</b> një lojë me 5 raunde ≈ 5 panorama + 5 geocoding. Kjo do të thotë rreth <b>1 000 lojëra në muaj pa pagesë</b>.</li>
+        <li style="margin-top:10px">Kërkimi i vendit nuk kushton — <code>StreetViewService.getPanorama()</code> merr vetëm metadata dhe nuk faturohet, pra tentativat e loja bën për të mos dalë jashtë Kosovës janë falas.</li>
+        <li style="margin-top:10px">Kujdes vetëm me modin <b>Lehtë</b>: çdo hap që bën nëpër rrugë ngarkon panoramë të re dhe numërohet veç. Modi <b>Normal</b> ose <b>Vështirë</b> mban një panoramë për raund.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div class="screen" id="scGame">
+  <div id="pano"></div>
+  <div id="hud">
+    <div class="stat"><b id="hudRound">1/5</b><i>Raundi</i></div>
+    <div class="stat"><b id="hudScore">0</b><i>Pikë</i></div>
+    <div class="stat" id="hudTimeWrap" hidden><b id="hudTime">—</b><i>Koha</i></div>
+  </div>
+  <button id="quit">Përfundo</button>
+  <div id="toast"></div>
+  <div id="mapPanel">
+    <div id="guessMap"></div>
+    <div class="mapbar">
+      <button id="pin" aria-pressed="false" title="Mbaj hartën të hapur">📌</button>
+      <button class="primary" id="btnGuess" disabled>Kliko hartën për të qëlluar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ROUND RESULT ============ -->
+<div class="veil" id="vResult">
+  <div class="sheet">
+    <div id="resultMap"></div>
+    <div class="body">
+      <div class="scoreline">
+        <span class="pts" id="rPts">0</span>
+        <span class="dist" id="rDist"></span>
+      </div>
+      <div class="bar"><span id="rBar" style="width:0"></span></div>
+      <p class="place" id="rPlace"></p>
+    </div>
+    <div class="foot">
+      <button id="rStreet">Hap vendin në Google Maps</button>
+      <button class="primary" id="rNext">Raundi tjetër →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FINAL ============ -->
+<div class="veil" id="vFinal">
+  <div class="sheet" style="max-width:560px">
+    <div class="body">
+      <h1 style="margin:0 0 16px;font-size:22px">Loja përfundoi</h1>
+      <div class="grand"><b id="fTotal">0</b><span id="fMax">/ 25000 pikë</span></div>
+      <table class="sum"><thead><tr><th>Raundi</th><th>Vendi</th><th>Largësia</th><th>Pikë</th></tr></thead>
+        <tbody id="fRows"></tbody></table>
+      <p class="best" id="fBest"></p>
+    </div>
+    <div class="foot">
+      <button id="fCopy">Kopjo rezultatin</button>
+      <button id="fMenu">Cilësimet</button>
+      <button class="primary" id="fAgain">Luaj përsëri</button>
+    </div>
+  </div>
+</div>
+
+<div id="splash"><div class="spin"></div><span id="splashTxt">Po kërkoj një vend brenda Kosovës…</span></div>
+
+<script>
+/* =========================================================================
+   Kufiri i Kosovës — OSM relation 2088990 (Nominatim, i thjeshtuar ~0.004°)
+   Format: [lat, lng]
+   ========================================================================= */
+const KOSOVO_POLY = [[42.7651,20.0247],[42.7283,20.0149],[42.7201,20.0322],[42.7093,20.0163],[42.7107,20.0332],[42.697,20.0333],[42.6955,20.0451],[42.6848,20.0544],[42.68,20.0834],[42.6687,20.0886],[42.6554,20.1119],[42.6209,20.0757],[42.6069,20.0728],[42.576,20.0885],[42.5558,20.0763],[42.5507,20.0883],[42.5326,20.1002],[42.5067,20.165],[42.4958,20.1674],[42.4866,20.1803],[42.473,20.1825],[42.4625,20.1968],[42.4525,20.193],[42.4337,20.2206],[42.4144,20.2261],[42.4016,20.208],[42.3801,20.2401],[42.37,20.2452],[42.353,20.2448],[42.3473,20.2361],[42.3332,20.2479],[42.327,20.2426],[42.3188,20.2573],[42.3235,20.2927],[42.3149,20.3055],[42.3277,20.3272],[42.3277,20.3391],[42.3172,20.3539],[42.3096,20.3534],[42.2986,20.3948],[42.2847,20.4047],[42.2723,20.4564],[42.2412,20.4964],[42.2281,20.5021],[42.2243,20.514],[42.2105,20.5242],[42.1859,20.5315],[42.1647,20.5471],[42.1607,20.5431],[42.1466,20.5585],[42.14,20.5554],[42.1212,20.5681],[42.1086,20.5609],[42.0979,20.5675],[42.0826,20.5546],[42.0591,20.5698],[42.0428,20.5945],[42.0197,20.5973],[41.9854,20.6118],[41.9743,20.6243],[41.961,20.6266],[41.9394,20.6194],[41.9267,20.5901],[41.9176,20.5855],[41.9175,20.5758],[41.8772,20.5944],[41.8578,20.6192],[41.8745,20.6484],[41.8734,20.6706],[41.8577,20.6835],[41.8657,20.707],[41.8643,20.728],[41.8928,20.7405],[41.9185,20.7765],[41.9468,20.7547],[41.9536,20.766],[41.9628,20.7671],[41.9824,20.7488],[42.0257,20.7482],[42.0408,20.7636],[42.0534,20.7582],[42.0648,20.7786],[42.0831,20.7908],[42.086,20.8341],[42.0994,20.8482],[42.0974,20.8915],[42.1152,20.9145],[42.1286,20.92],[42.1523,21.0264],[42.1858,21.068],[42.1942,21.0913],[42.206,21.1039],[42.2068,21.1191],[42.191,21.168],[42.1667,21.1806],[42.1328,21.2145],[42.111,21.2126],[42.0937,21.2223],[42.0982,21.2335],[42.0927,21.2458],[42.0947,21.2684],[42.112,21.2947],[42.1045,21.3035],[42.108,21.3213],[42.1413,21.3024],[42.1608,21.321],[42.1702,21.3173],[42.1903,21.3352],[42.1991,21.3311],[42.2075,21.335],[42.2048,21.3458],[42.2208,21.3584],[42.2243,21.3713],[42.2465,21.3851],[42.2492,21.4013],[42.2458,21.4172],[42.2317,21.4339],[42.2349,21.4443],[42.2598,21.4322],[42.2623,21.4404],[42.2779,21.4449],[42.28,21.4708],[42.2705,21.5111],[42.2606,21.5201],[42.2415,21.5213],[42.2406,21.532],[42.2535,21.5443],[42.2507,21.569],[42.2593,21.5836],[42.2696,21.5893],[42.283,21.5845],[42.2988,21.5618],[42.3098,21.5658],[42.3154,21.5591],[42.3089,21.5419],[42.3198,21.5329],[42.3209,21.5369],[42.3255,21.5248],[42.342,21.5253],[42.3597,21.5354],[42.3664,21.5319],[42.3733,21.5404],[42.3624,21.5523],[42.3678,21.5613],[42.3627,21.5714],[42.3679,21.5795],[42.3756,21.5743],[42.3839,21.5944],[42.3753,21.6059],[42.378,21.6207],[42.4133,21.6465],[42.4207,21.6371],[42.4292,21.6378],[42.4531,21.6224],[42.4761,21.658],[42.4837,21.6578],[42.4843,21.6712],[42.4928,21.6672],[42.5027,21.6911],[42.5156,21.692],[42.5166,21.7106],[42.5394,21.6934],[42.5499,21.7069],[42.5471,21.7284],[42.5589,21.7476],[42.5807,21.7477],[42.6012,21.7339],[42.6089,21.7428],[42.6074,21.7509],[42.6195,21.7576],[42.6285,21.7521],[42.6378,21.7595],[42.6344,21.771],[42.6513,21.7899],[42.6673,21.7713],[42.6769,21.7717],[42.6838,21.7597],[42.7013,21.7524],[42.6899,21.7153],[42.6872,21.6743],[42.6769,21.6731],[42.6655,21.6604],[42.6801,21.6442],[42.6981,21.6383],[42.6952,21.6187],[42.7036,21.5872],[42.7262,21.5923],[42.7278,21.5714],[42.7377,21.5595],[42.7231,21.5406],[42.7336,21.5015],[42.7477,21.4793],[42.7363,21.4675],[42.7502,21.4491],[42.7451,21.393],[42.7583,21.3892],[42.7668,21.4075],[42.7761,21.4113],[42.7877,21.4084],[42.7903,21.4133],[42.7946,21.4064],[42.8052,21.41],[42.8106,21.4247],[42.8262,21.4173],[42.8326,21.4242],[42.8471,21.4236],[42.8516,21.4371],[42.8723,21.4351],[42.8747,21.4025],[42.8665,21.3854],[42.873,21.3769],[42.8709,21.3652],[42.881,21.35],[42.8995,21.3421],[42.9026,21.3309],[42.9061,21.3045],[42.8952,21.2823],[42.8972,21.2712],[42.9101,21.2703],[42.9504,21.2357],[42.9809,21.2438],[43.0055,21.2378],[43.0204,21.2252],[43.0234,21.1973],[43.008,21.193],[43.0005,21.1711],[43.0147,21.1634],[43.0263,21.1677],[43.0296,21.1557],[43.0601,21.153],[43.0822,21.1396],[43.091,21.1499],[43.1135,21.1372],[43.1112,21.1134],[43.1357,21.0886],[43.1291,21.079],[43.115,21.0758],[43.1075,21.0503],[43.1295,21.0254],[43.1383,20.9955],[43.134,20.9725],[43.1244,20.9669],[43.126,20.957],[43.1342,20.9336],[43.1459,20.9262],[43.156,20.8893],[43.1669,20.8817],[43.1648,20.8633],[43.1744,20.856],[43.173,20.8385],[43.1791,20.8311],[43.1836,20.8342],[43.1891,20.8551],[43.1981,20.8435],[43.2071,20.8436],[43.2037,20.8894],[43.2109,20.8799],[43.2263,20.877],[43.2512,20.852],[43.2733,20.8119],[43.244,20.7613],[43.2487,20.7282],[43.2272,20.7095],[43.2098,20.6755],[43.2067,20.5948],[43.1877,20.6115],[43.1696,20.6114],[43.154,20.6583],[43.1443,20.662],[43.138,20.6576],[43.123,20.6851],[43.1091,20.6928],[43.1025,20.6874],[43.0907,20.6926],[43.0817,20.6836],[43.0737,20.6562],[43.0653,20.6691],[43.0496,20.6655],[43.0391,20.6714],[43.0335,20.6522],[43.0221,20.651],[43.0224,20.641],[43.0068,20.6405],[43.0091,20.6299],[43.0025,20.6197],[43.0047,20.6151],[43.0175,20.6177],[43.017,20.5908],[43.0118,20.58],[43.002,20.5812],[42.9965,20.5679],[42.9612,20.5465],[42.9752,20.5299],[42.9706,20.5146],[42.9523,20.4962],[42.9291,20.4863],[42.9053,20.5055],[42.8832,20.5383],[42.8676,20.4858],[42.8332,20.4382],[42.8472,20.4087],[42.8323,20.3636],[42.8359,20.3351],[42.8262,20.3201],[42.836,20.3156],[42.8362,20.298],[42.8253,20.2924],[42.8307,20.2811],[42.8199,20.2738],[42.8107,20.2524],[42.8042,20.2628],[42.7783,20.266],[42.7592,20.2504],[42.7462,20.2129],[42.7504,20.1957],[42.7453,20.1912],[42.7684,20.155],[42.7546,20.1468],[42.7639,20.115],[42.7767,20.0982],[42.7791,20.0604],[42.7651,20.0247]];
+
+const BB = { s:41.8577, n:43.2733, w:20.0149, e:21.7899 };
+
+/* Pika-fara: qytete e qendra komunale. getPanorama() e kap rrugën më të afërt,
+   pra saktësia e tyre nuk ka nevojë të jetë kirurgjikale. */
+const TOWNS = [
+  [42.6629,21.1655,"Prishtinë"],[42.2139,20.7397,"Prizren"],[42.6593,20.2887,"Pejë"],
+  [42.3803,20.4308,"Gjakovë"],[42.8914,20.8660,"Mitrovicë"],[42.3703,21.1553,"Ferizaj"],
+  [42.4635,21.4694,"Gjilan"],[42.8231,20.9675,"Vushtrri"],[42.9111,21.1933,"Podujevë"],
+  [42.3589,20.8256,"Suharekë"],[42.3994,20.6547,"Rahovec"],[42.4822,20.7461,"Malishevë"],
+  [42.6272,20.8925,"Drenas"],[42.5217,21.1258,"Lipjan"],[42.7469,20.7889,"Skenderaj"],
+  [42.2317,21.2586,"Kaçanik"],[42.5406,20.2886,"Deçan"],[42.7803,20.4842,"Istog"],
+  [42.6217,20.5772,"Klinë"],[42.3222,21.3592,"Viti"],[42.6875,21.0708,"Obiliq"],
+  [42.6386,21.0961,"Fushë Kosovë"],[42.4331,21.0397,"Shtime"],[42.5786,21.5764,"Kamenicë"],
+  [42.0625,20.6528,"Dragash"],[42.4761,20.2775,"Junik"],[42.5989,21.1917,"Graçanicë"],
+  [42.2394,21.0272,"Shtërpcë"],[42.6081,21.4300,"Novobërdë"],[42.1489,21.2969,"Hani i Elezit"],
+  [42.3283,20.7264,"Mamushë"],[42.5581,21.5581,"Ranillug"],[42.3706,21.3792,"Kllokot"],
+  [42.4022,21.4283,"Partesh"],[42.2072,20.9750,"Brezovicë"],[42.5006,21.1608,"Gadime"],
+  [42.9556,20.7639,"Ujmani"],[42.7000,21.3500,"Batllavë"]
+];
+
+/* Konvencioni i GeoGuessr-it:  S = 5000 · e^(−10d/D)
+   D = diagonalja e drejtkëndëshit kufizues, haversine me R = 6371 km → 214 251 m.
+   Pikë të plota nën D/100000, por gjithsesi nën 25 m → pragu bie në 25 m. */
+const MAX_PER_ROUND = 5000;
+function havM(a, b){
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+  const la1 = a.lat * r, la2 = b.lat * r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+const MAP_SIZE = Math.min(
+  havM({ lat:BB.s, lng:BB.w }, { lat:BB.n, lng:BB.e }),
+  havM({ lat:BB.n, lng:BB.w }, { lat:BB.s, lng:BB.e })
+);
+const PERFECT_M = Math.max(25, MAP_SIZE / 100000);
+const KEY_LS = "geokosova.key";
+const BEST_LS = "geokosova.best";
+
+const $ = id => document.getElementById(id);
+const S = {
+  rounds:5, diff:"normal", time:0, area:"mixed",
+  round:0, total:0, history:[], target:null, guess:null,
+  tLeft:0, tHandle:null, usedPanos:new Set(), lastInside:null, reverting:false
+};
+
+/* ---------------- ndihmës UI ---------------- */
+function seg(elId, key, onChange){
+  const box = $(elId);
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button[data-v]");
+    if (!b) return;
+    [...box.querySelectorAll("button")].forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    const v = b.dataset.v;
+    S[key] = /^\d+$/.test(v) ? +v : v;
+    if (onChange) onChange(S[key]);
+  });
+}
+const DIFF_TXT = {
+  easy:   "Mund të ecësh nëpër rrugë, të zmadhosh dhe të rrotullohesh.",
+  normal: "Rrotullim dhe zoom, por pa ecur nga vendi.",
+  hard:   "Vetëm rrotullim — pa ecur, pa zoom."
+};
+const AREA_TXT = {
+  mixed:  "Përzierje qytetesh dhe rrugëve rurale — baraspeshë e mirë.",
+  all:    "Pikë plotësisht të rastit brenda kufirit; shpesh fshatra e rrugë malore.",
+  towns:  "Vetëm brenda ose pranë qendrave urbane — më e lehtë."
+};
+function showToast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(showToast._h); showToast._h = setTimeout(()=>t.classList.remove("on"), 2200);
+}
+function splash(on, txt){
+  if (txt) $("splashTxt").textContent = txt;
+  $("splash").classList.toggle("on", !!on);
+}
+function fmtDist(m){
+  return m < 1000 ? Math.round(m) + " m" : (m/1000).toFixed(m < 10000 ? 2 : 1) + " km";
+}
+
+/* ---------------- ngarkimi i Google Maps ---------------- */
+let mapsLoaded = false;
+function loadMaps(key){
+  if (mapsLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    window.gm_authFailure = () => {
+      if (settled) { showToast("API key u refuzua nga Google."); return; }
+      settled = true; reject(new Error("auth"));
+    };
+    window.__gmReady = () => { if (!settled){ settled = true; mapsLoaded = true; resolve(); } };
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) +
+            "&libraries=geometry&language=sq&region=XK&loading=async&callback=__gmReady";
+    s.onerror = () => { if (!settled){ settled = true; reject(new Error("net")); } };
+    document.head.appendChild(s);
+    setTimeout(() => { if (!settled){ settled = true; reject(new Error("timeout")); } }, 15000);
+  });
+}
+
+/* ---------------- objektet e Maps ---------------- */
+let svc, geocoder, gMap, rMap, kPolyGeom;
+let guessMarker = null, rMarkers = [], rLine = null, panorama = null;
+
+function initMaps(){
+  svc = new google.maps.StreetViewService();
+  geocoder = new google.maps.Geocoder();
+  kPolyGeom = new google.maps.Polygon({
+    paths: KOSOVO_POLY.map(p => ({ lat:p[0], lng:p[1] }))
+  });
+
+  panorama = new google.maps.StreetViewPanorama($("pano"), {
+    visible: false, addressControl: false, showRoadLabels: false,
+    fullscreenControl: false, enableCloseButton: false, motionTracking: false,
+    motionTrackingControl: false, imageDateControl: false
+  });
+
+  gMap = new google.maps.Map($("guessMap"), {
+    center: { lat:42.58, lng:20.9 }, zoom: 7.4, minZoom: 7, maxZoom: 17,
+    mapTypeId: "roadmap", disableDefaultUI: true, zoomControl: true,
+    clickableIcons: false, gestureHandling: "greedy",
+    restriction: { latLngBounds:{ north:43.42, south:41.72, east:21.98, west:19.86 }, strictBounds:false }
+  });
+  new google.maps.Polygon({
+    map: gMap, paths: KOSOVO_POLY.map(p => ({ lat:p[0], lng:p[1] })),
+    strokeColor:"#f5c542", strokeWeight:2, strokeOpacity:.9,
+    fillColor:"#f5c542", fillOpacity:.05, clickable:false
+  });
+  gMap.addListener("click", e => placeGuess(e.latLng));
+}
+
+function placeGuess(latLng){
+  if (!google.maps.geometry.poly.containsLocation(latLng, kPolyGeom)){
+    showToast("Qëllo brenda kufirit të Kosovës.");
+    return;
+  }
+  S.guess = latLng;
+  if (guessMarker) guessMarker.setPosition(latLng);
+  else guessMarker = new google.maps.Marker({
+    map: gMap, position: latLng, draggable: true,
+    title: "Hamendja jote",
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE, scale: 8,
+      fillColor:"#f5c542", fillOpacity:1, strokeColor:"#1a1206", strokeWeight:2
+    }
+  });
+  if (!guessMarker.__wired){
+    guessMarker.__wired = true;
+    guessMarker.addListener("dragend", ev => {
+      if (google.maps.geometry.poly.containsLocation(ev.latLng, kPolyGeom)) S.guess = ev.latLng;
+      else { guessMarker.setPosition(S.guess); showToast("Qëllo brenda kufirit të Kosovës."); }
+    });
+  }
+  const b = $("btnGuess");
+  b.disabled = false;
+  b.textContent = "Konfirmo hamendjen";
+}
+
+/* ---------------- gjetja e vendit ---------------- */
+function randomPointInKosovo(){
+  for (let i = 0; i < 800; i++){
+    const p = new google.maps.LatLng(
+      BB.s + Math.random() * (BB.n - BB.s),
+      BB.w + Math.random() * (BB.e - BB.w)
+    );
+    if (google.maps.geometry.poly.containsLocation(p, kPolyGeom)) return p;
+  }
+  return new google.maps.LatLng(42.6629, 21.1655);
+}
+
+function getPano(loc, radius){
+  const req = { location: loc, radius, preference: google.maps.StreetViewPreference.NEAREST };
+  const Src = google.maps.StreetViewSource;
+  if (Src && Src.GOOGLE) req.sources = [Src.GOOGLE];
+  else if (Src && Src.OUTDOOR) req.source = Src.OUTDOOR;
+  return new Promise(resolve => {
+    svc.getPanorama(req, (data, status) => {
+      resolve(status === google.maps.StreetViewStatus.OK && data && data.location ? data : null);
+    });
+  });
+}
+
+async function findLocation(){
+  const tooClose = loc => S.history.some(h =>
+    google.maps.geometry.spherical.computeDistanceBetween(h.answer, loc) < 4000);
+
+  for (let attempt = 0; attempt < 45; attempt++){
+    let seed, radius;
+    const useTown = S.area === "towns" || (S.area === "mixed" && Math.random() < 0.5);
+    if (useTown){
+      const t = TOWNS[Math.floor(Math.random() * TOWNS.length)];
+      const spread = S.area === "towns" ? 0.035 : 0.075;
+      seed = new google.maps.LatLng(
+        t[0] + (Math.random() - .5) * spread * 2,
+        t[1] + (Math.random() - .5) * spread * 2.6
+      );
+      radius = S.area === "towns" ? 1800 : 5000;
+    } else {
+      seed = randomPointInKosovo();
+      radius = attempt < 25 ? 6000 : 12000;
+    }
+
+    const data = await getPano(seed, radius);
+    if (!data) continue;
+    const loc = data.location.latLng;
+    if (!google.maps.geometry.poly.containsLocation(loc, kPolyGeom)) continue;   // jashtë Kosovës
+    if (S.usedPanos.has(data.location.pano)) continue;
+    if (attempt < 35 && tooClose(loc)) continue;                                  // shumë afër një raundi tjetër
+    S.usedPanos.add(data.location.pano);
+    return data;
+  }
+  return null;
+}
+
+/* ---------------- rrjedha e lojës ---------------- */
+function panoOptsForDiff(){
+  const d = S.diff;
+  return {
+    linksControl: d === "easy",
+    clickToGo: d === "easy",
+    panControl: d !== "hard",
+    zoomControl: d === "easy" || d === "normal",
+    scrollwheel: d === "easy" || d === "normal",
+    disableDoubleClickZoom: d === "hard",
+    addressControl: false, showRoadLabels: false, fullscreenControl: false,
+    enableCloseButton: false, motionTracking: false, motionTrackingControl: false,
+    imageDateControl: false
+  };
+}
+
+let panoWired = false;
+function wirePanoGuards(){
+  if (panoWired) return;
+  panoWired = true;
+
+  // Mos lejo daljen jashtë Kosovës duke ecur (vetëm në modin "Lehtë").
+  panorama.addListener("position_changed", () => {
+    if (S.reverting) return;
+    const p = panorama.getPosition();
+    if (!p) return;
+    if (google.maps.geometry.poly.containsLocation(p, kPolyGeom)){ S.lastInside = p; return; }
+    if (!S.lastInside) return;
+    S.reverting = true;
+    panorama.setPosition(S.lastInside);
+    showToast("Kufiri i Kosovës — nuk shkohet më tutje.");
+    setTimeout(() => { S.reverting = false; }, 350);
+  });
+
+  // Në "Vështirë" mbaje zoom-in të fiksuar.
+  panorama.addListener("zoom_changed", () => {
+    if (S.diff === "hard" && panorama.getZoom() !== 1) panorama.setZoom(1);
+  });
+}
+
+async function nextRound(){
+  S.round++;
+  S.guess = null;
+  if (guessMarker){ guessMarker.setMap(null); guessMarker = null; }
+  const b = $("btnGuess");
+  b.disabled = true; b.textContent = "Kliko hartën për të qëlluar";
+  $("hudRound").textContent = S.round + "/" + S.rounds;
+  $("hudScore").textContent = S.total.toLocaleString("de-DE");
+
+  splash(true, "Po kërkoj një vend brenda Kosovës…");
+  const data = await findLocation();
+  if (!data){
+    splash(false);
+    if (!S.history.length){
+      // Dështim në raundin e parë: një ekran final me 0/25000 nuk do të thoshte gjë.
+      S.round = 0;
+      $("scGame").classList.remove("on");
+      $("scSetup").classList.add("on");
+      const err = $("setupErr");
+      err.textContent = "Nuk u gjet asnjë panoramë brenda Kosovës. Provo zonën 'Qytete'.";
+      err.classList.add("on");
+      return;
+    }
+    showToast("Nuk u gjet panoramë e re — po e mbyll lojën.");
+    return finishGame();
+  }
+  S.target = data;
+  S.lastInside = data.location.latLng;
+
+  panorama.setOptions(panoOptsForDiff());
+  panorama.setPano(data.location.pano);
+  panorama.setPov({ heading: Math.random() * 360, pitch: 0 });
+  panorama.setZoom(1);
+  panorama.setVisible(true);
+  wirePanoGuards();
+
+  gMap.setCenter({ lat:42.58, lng:20.9 });
+  gMap.setZoom(7.4);
+  splash(false);
+  startTimer();
+}
+
+function startTimer(){
+  stopTimer();
+  const wrap = $("hudTimeWrap");
+  if (!S.time){ wrap.hidden = true; return; }
+  wrap.hidden = false;
+  S.tLeft = S.time;
+  paintTimer();
+  S.tHandle = setInterval(() => {
+    S.tLeft--;
+    paintTimer();
+    if (S.tLeft <= 0){ stopTimer(); submitGuess(true); }
+  }, 1000);
+}
+function stopTimer(){ if (S.tHandle){ clearInterval(S.tHandle); S.tHandle = null; } }
+function paintTimer(){
+  const m = Math.floor(S.tLeft / 60), s = S.tLeft % 60;
+  $("hudTime").textContent = m + ":" + String(s).padStart(2, "0");
+  // Pragu i alarmit lidhet me gjatësinë e raundit: 10s → 3s, 60s → 15s.
+  const warnAt = Math.min(15, Math.max(3, Math.ceil(S.time / 4)));
+  $("hudTimeWrap").classList.toggle("warn", S.tLeft <= warnAt);
+}
+
+function pointsFor(dist){
+  if (dist <= PERFECT_M) return MAX_PER_ROUND;
+  return Math.round(MAX_PER_ROUND * Math.exp(-10 * dist / MAP_SIZE));
+}
+
+function submitGuess(fromTimeout){
+  stopTimer();
+  const answer = S.target.location.latLng;
+  let dist = null, pts = 0;
+  if (S.guess){
+    dist = google.maps.geometry.spherical.computeDistanceBetween(S.guess, answer);
+    pts = pointsFor(dist);
+  } else if (!fromTimeout){
+    return;
+  }
+  S.total += pts;
+  S.history.push({ round:S.round, answer, guess:S.guess, dist, pts, place:null });
+  $("hudScore").textContent = S.total.toLocaleString("de-DE");
+  showRoundResult(fromTimeout && !S.guess);
+}
+
+function showRoundResult(timedOut){
+  const h = S.history[S.history.length - 1];
+  $("rPts").textContent = h.pts.toLocaleString("de-DE") + " pikë";
+  $("rDist").textContent = timedOut
+    ? "Koha mbaroi — pa hamendje."
+    : (h.dist <= PERFECT_M ? "Në shenjë! " : "Larg ") + fmtDist(h.dist);
+  $("rBar").style.width = (h.pts / MAX_PER_ROUND * 100).toFixed(1) + "%";
+  $("rPlace").textContent = "Po e kërkoj emrin e vendit…";
+  $("rNext").textContent = S.round >= S.rounds ? "Shiko rezultatin →" : "Raundi tjetër →";
+
+  $("vResult").classList.add("on");
+
+  if (!rMap){
+    rMap = new google.maps.Map($("resultMap"), {
+      mapTypeId: "roadmap", disableDefaultUI: true, zoomControl: true, clickableIcons: false
+    });
+    new google.maps.Polygon({
+      map: rMap, paths: KOSOVO_POLY.map(p => ({ lat:p[0], lng:p[1] })),
+      strokeColor:"#f5c542", strokeWeight:1.5, strokeOpacity:.55,
+      fillColor:"#f5c542", fillOpacity:.03, clickable:false
+    });
+  }
+  rMarkers.forEach(m => m.setMap(null)); rMarkers = [];
+  if (rLine){ rLine.setMap(null); rLine = null; }
+
+  rMarkers.push(new google.maps.Marker({
+    map: rMap, position: h.answer, title: "Vendi i saktë",
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9,
+      fillColor:"#3fb950", fillOpacity:1, strokeColor:"#08130a", strokeWeight:2 }
+  }));
+
+  const bounds = new google.maps.LatLngBounds();
+  bounds.extend(h.answer);
+  if (h.guess){
+    rMarkers.push(new google.maps.Marker({
+      map: rMap, position: h.guess, title: "Hamendja jote",
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8,
+        fillColor:"#f5c542", fillOpacity:1, strokeColor:"#1a1206", strokeWeight:2 }
+    }));
+    rLine = new google.maps.Polyline({
+      map: rMap, path: [h.guess, h.answer], geodesic: true,
+      strokeColor:"#e6edf3", strokeOpacity:0, icons: [{
+        icon: { path:"M 0,-1 0,1", strokeOpacity:.8, strokeColor:"#e6edf3", scale:3 },
+        offset:"0", repeat:"12px"
+      }]
+    });
+    bounds.extend(h.guess);
+  }
+  rMap.fitBounds(bounds, 60);
+  if (!h.guess) setTimeout(() => rMap.setZoom(12), 60);
+
+  geocoder.geocode({ location: h.answer, language: "sq" }, (res, status) => {
+    let name = null;
+    if (status === "OK" && res && res.length){
+      const want = ["locality","postal_town","administrative_area_level_2",
+                    "administrative_area_level_1","sublocality"];
+      for (const type of want){
+        const hit = res.find(r => r.types.includes(type));
+        if (hit){
+          const c = hit.address_components.find(a => a.types.includes(type));
+          name = c ? c.long_name : hit.formatted_address;
+          break;
+        }
+      }
+      if (!name) name = res[0].formatted_address;
+    }
+    h.place = name;
+    $("rPlace").textContent = name
+      ? "Vendi i saktë: " + name + "  ·  " + h.answer.lat().toFixed(5) + ", " + h.answer.lng().toFixed(5)
+      : "Vendi i saktë: " + h.answer.lat().toFixed(5) + ", " + h.answer.lng().toFixed(5);
+  });
+}
+
+function finishGame(){
+  stopTimer();
+  panorama.setVisible(false);
+  $("vResult").classList.remove("on");
+  const max = S.rounds * MAX_PER_ROUND;
+  $("fTotal").textContent = S.total.toLocaleString("de-DE");
+  $("fMax").textContent = "/ " + max.toLocaleString("de-DE") + " pikë";
+  $("fRows").innerHTML = S.history.map(h =>
+    "<tr><td>" + h.round + "</td><td>" + (h.place || "—") + "</td><td>" +
+    (h.dist == null ? "—" : fmtDist(h.dist)) + "</td><td>" +
+    h.pts.toLocaleString("de-DE") + "</td></tr>"
+  ).join("");
+
+  let best = 0;
+  try { best = +(localStorage.getItem(BEST_LS + "." + S.rounds) || 0); } catch(e){}
+  if (S.total > best){
+    best = S.total;
+    try { localStorage.setItem(BEST_LS + "." + S.rounds, String(best)); } catch(e){}
+    $("fBest").textContent = "Rekord i ri personal për " + S.rounds + " raunde 🎉";
+  } else {
+    $("fBest").textContent = "Rekordi jot për " + S.rounds + " raunde: " + best.toLocaleString("de-DE") + " pikë.";
+  }
+  $("vFinal").classList.add("on");
+}
+
+function resetGame(){
+  S.round = 0; S.total = 0; S.history = []; S.guess = null;
+  S.usedPanos = new Set(); S.lastInside = null;
+  if (guessMarker){ guessMarker.setMap(null); guessMarker = null; }
+}
+
+/* ---------------- lidhja e kontrolleve ---------------- */
+seg("segRounds", "rounds");
+seg("segDiff", "diff", v => $("diffHint").textContent = DIFF_TXT[v]);
+seg("segTime", "time");
+seg("segArea", "area", v => $("areaHint").textContent = AREA_TXT[v]);
+$("diffHint").textContent = DIFF_TXT.normal;
+$("areaHint").textContent = AREA_TXT.mixed;
+
+try {
+  const saved = localStorage.getItem(KEY_LS);
+  if (saved) $("apikey").value = saved;
+} catch(e){}
+
+$("btnStart").addEventListener("click", async () => {
+  const err = $("setupErr");
+  const key = $("apikey").value.trim();
+  err.classList.remove("on");
+  if (!key){
+    err.textContent = "Duhet një Google Maps API key. Shih udhëzimet më poshtë.";
+    err.classList.add("on");
+    return;
+  }
+  try { localStorage.setItem(KEY_LS, key); } catch(e){}
+
+  $("btnStart").disabled = true;
+  splash(true, "Po ngarkoj Google Maps…");
+  try {
+    await loadMaps(key);
+  } catch (e){
+    splash(false);
+    $("btnStart").disabled = false;
+    err.textContent = e.message === "auth"
+      ? "Google e refuzoi key-in. Kontrollo që Maps JavaScript API është aktiv dhe që kufizimi i faqeve përfshin këtë adresë (" + location.origin + ")."
+      : e.message === "timeout"
+        ? "Google Maps nuk u ngarkua brenda 15 sekondave. Kontrollo internetin."
+        : "Nuk u ngarkua Google Maps. Kontrollo internetin dhe key-in.";
+    err.classList.add("on");
+    return;
+  }
+  if (!svc) initMaps();
+  resetGame();
+  $("scSetup").classList.remove("on");
+  $("scGame").classList.add("on");
+  $("btnStart").disabled = false;
+  nextRound();
+});
+
+$("btnGuess").addEventListener("click", () => submitGuess(false));
+$("pin").addEventListener("click", () => {
+  const p = $("pin"), on = p.getAttribute("aria-pressed") === "true";
+  p.setAttribute("aria-pressed", String(!on));
+  $("mapPanel").classList.toggle("pinned", !on);
+});
+$("quit").addEventListener("click", () => {
+  if (S.history.length) finishGame();
+  else { stopTimer(); panorama.setVisible(false);
+    $("scGame").classList.remove("on"); $("scSetup").classList.add("on"); }
+});
+$("rNext").addEventListener("click", () => {
+  $("vResult").classList.remove("on");
+  if (S.round >= S.rounds) finishGame();
+  else nextRound();
+});
+$("rStreet").addEventListener("click", () => {
+  const h = S.history[S.history.length - 1];
+  window.open("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" +
+    h.answer.lat() + "," + h.answer.lng(), "_blank", "noopener");
+});
+$("fAgain").addEventListener("click", () => {
+  $("vFinal").classList.remove("on");
+  resetGame();
+  nextRound();
+});
+$("fMenu").addEventListener("click", () => {
+  $("vFinal").classList.remove("on");
+  $("scGame").classList.remove("on");
+  $("scSetup").classList.add("on");
+});
+$("fCopy").addEventListener("click", async () => {
+  const lines = S.history.map(h =>
+    "R" + h.round + ": " + (h.place || "?") + " — " +
+    (h.dist == null ? "pa hamendje" : fmtDist(h.dist)) + " — " + h.pts + " pikë");
+  const txt = "GeoKosova · " + S.rounds + " raunde · " + S.diff + "\n" +
+    lines.join("\n") + "\nTotal: " + S.total + "/" + (S.rounds * MAX_PER_ROUND);
+  try { await navigator.clipboard.writeText(txt); $("fCopy").textContent = "U kopjua ✓"; }
+  catch(e){ $("fCopy").textContent = "Nuk u kopjua"; }
+  setTimeout(() => $("fCopy").textContent = "Kopjo rezultatin", 1800);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " "){
+    if ($("vResult").classList.contains("on")){ e.preventDefault(); $("rNext").click(); }
+    else if ($("scGame").classList.contains("on") && !$("btnGuess").disabled){
+      e.preventDefault(); submitGuess(false);
+    }
+  }
+});
+$("apikey").addEventListener("keydown", e => { if (e.key === "Enter") $("btnStart").click(); });
+</script>
+</body>
+</html>
